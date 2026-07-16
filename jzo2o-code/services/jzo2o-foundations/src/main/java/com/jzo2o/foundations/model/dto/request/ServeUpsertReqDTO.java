@@ -8,9 +8,6 @@ import java.math.BigDecimal;
 
 /**
  * 服务新增更新
- *
- * @author itcast
- * @create 2023/7/3 14:43
  **/
 @Data
 @ApiModel("服务新增更新")
