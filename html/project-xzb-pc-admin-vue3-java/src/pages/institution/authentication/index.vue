@@ -153,19 +153,21 @@ const handleClose = () => {
 const handleBuild = () => {
   router.push('/institution/authentication/authenticationDetail')
 }
-// 确认冻结
+const isAuditSuccess = (res) =>
+  res?.code === 200 || res?.data?.code === 200 || res?.status === 200
+const getAuditErrorMsg = (res) => res?.data?.msg || res?.msg || '操作失败'
+// 确认驳回
 const handleFreeze = async (val) => {
   await serviceInstitutionAudit({
     certificationStatus: 3,
     rejectReason: val.selectName
-  },freezeId.value).then((res) => {
-    if (res.data.code === 200) {
-      dialogFreezeVisible.value = false
+  }, freezeId.value).then((res) => {
+    if (isAuditSuccess(res)) {
+      visible.value = false
       MessagePlugin.success('驳回成功')
       fetchData(requestData.value)
-      dialogForm.value.onClickCloseBtn()
     } else {
-      MessagePlugin.error(res.msg)
+      MessagePlugin.error(getAuditErrorMsg(res))
     }
   })
 }
@@ -208,13 +210,13 @@ const handleThaw = async () => {
   await serviceInstitutionAudit({
     rejectReason: '',
     certificationStatus: 2
-  },freezeId.value).then((res) => {
-    if (res.data.code === 200) {
+  }, freezeId.value).then((res) => {
+    if (isAuditSuccess(res)) {
       dialogFreezeVisible.value = false
       MessagePlugin.success('通过成功')
       fetchData(requestData.value)
     } else {
-      MessagePlugin.error(res.msg)
+      MessagePlugin.error(getAuditErrorMsg(res))
     }
   })
 }

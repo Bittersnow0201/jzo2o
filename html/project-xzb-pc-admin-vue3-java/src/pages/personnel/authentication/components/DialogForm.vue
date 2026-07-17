@@ -84,7 +84,12 @@ const token = localStorage.getItem('xzb')
 // 表单
 const form = ref()
 // 触发父级事件
-const emit: Function = defineEmits(['handleClose', 'fetchData','handleConfirmCancel'])
+const emit: Function = defineEmits([
+  'handleClose',
+  'fetchData',
+  'handleConfirmCancel',
+  'handleSubmit'
+])
 // 弹窗
 const formVisible = ref(false)
 // 表单数据
@@ -98,7 +103,6 @@ const title = ref()
 const onSubmit = (result: ValidateResultContext<FormData>) => {
   if (result.validateResult === true) {
     emit('handleSubmit', formData.value)
-    onClickCloseBtn()
   }
 }
 // 点击取消关闭

@@ -9,6 +9,7 @@ import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.validation.Valid;
 
 /**
  * <p>
@@ -25,7 +26,12 @@ public class ServeProviderController {
     @Resource
     private IServeProviderService serveProviderService;
 
-
+    @PostMapping("/institution/resetPassword")
+    @ApiOperation("机构登录密码重置接口")
+    public void resetInstitutionPassword(
+            @RequestBody @Valid InstitutionResetPasswordReqDTO institutionResetPasswordReqDTO) {
+        serveProviderService.resetInstitutionPassword(institutionResetPasswordReqDTO);
+    }
 
     @GetMapping("/currentUserInfo")
     @ApiOperation("获取当前用户信息")

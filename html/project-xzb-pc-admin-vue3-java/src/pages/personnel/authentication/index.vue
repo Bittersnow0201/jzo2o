@@ -163,7 +163,10 @@ const handleClose = () => {
 const handleBuild = () => {
   router.push('/personnel/authentication/authenticationDetail')
 }
-// 确认冻结
+const isAuditSuccess = (res) =>
+  res?.code === 200 || res?.data?.code === 200 || res?.status === 200
+const getAuditErrorMsg = (res) => res?.data?.msg || res?.msg || '操作失败'
+// 确认驳回
 const handleFreeze = async (val) => {
   await servicePersonAudit(
     {
@@ -172,13 +175,12 @@ const handleFreeze = async (val) => {
     },
     freezeId.value
   ).then((res) => {
-    if (res.data.code === 200) {
-      dialogFreezeVisible.value = false
+    if (isAuditSuccess(res)) {
+      visible.value = false
       MessagePlugin.success('驳回成功')
       fetchData(requestData.value)
-      dialogForm.value.onClickCloseBtn()
     } else {
-      MessagePlugin.error(res.msg)
+      MessagePlugin.error(getAuditErrorMsg(res))
     }
   })
 }
@@ -225,12 +227,12 @@ const handleThaw = async () => {
     },
     freezeId.value
   ).then((res) => {
-    if (res.data.code === 200) {
+    if (isAuditSuccess(res)) {
       dialogFreezeVisible.value = false
       MessagePlugin.success('通过成功')
       fetchData(requestData.value)
     } else {
-      MessagePlugin.error(res.msg)
+      MessagePlugin.error(getAuditErrorMsg(res))
     }
   })
 }

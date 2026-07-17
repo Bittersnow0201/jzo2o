@@ -151,6 +151,44 @@ public class ServeProviderServiceImpl extends ServiceImpl<ServeProviderMapper, S
     }
 
     @Override
+    public void registerInstitution(InstitutionRegisterReqDTO institutionRegisterReqDTO) {
+        boolean verifyResult = Boolean.TRUE.equals(smsCodeApi.verify(
+                institutionRegisterReqDTO.getPhone(),
+                SmsBussinessTypeEnum.INSTITION_REGISTER,
+                institutionRegisterReqDTO.getVerifyCode()).getIsSuccess());
+        if (!verifyResult) {
+            throw new BadRequestException("验证码错误，请重新输入");
+        }
+
+        String encodedPassword = passwordEncoder.encode(institutionRegisterReqDTO.getPassword());
+        owner.add(institutionRegisterReqDTO.getPhone(), UserType.INSTITUTION, encodedPassword);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetInstitutionPassword(InstitutionResetPasswordReqDTO institutionResetPasswordReqDTO) {
+        boolean verifyResult = Boolean.TRUE.equals(smsCodeApi.verify(
+                institutionResetPasswordReqDTO.getPhone(),
+                SmsBussinessTypeEnum.INSTITUTION_RESET_PASSWORD,
+                institutionResetPasswordReqDTO.getVerifyCode()).getIsSuccess());
+        if (!verifyResult) {
+            throw new BadRequestException("验证码错误，请重新输入");
+        }
+
+        ServeProvider serveProvider = findByPhoneAndType(
+                institutionResetPasswordReqDTO.getPhone(), UserType.INSTITUTION);
+        if (serveProvider == null) {
+            throw new BadRequestException("该手机号未注册机构账号");
+        }
+
+        lambdaUpdate()
+                .eq(ServeProvider::getId, serveProvider.getId())
+                .set(ServeProvider::getPassword,
+                        passwordEncoder.encode(institutionResetPasswordReqDTO.getPassword()))
+                .update();
+    }
+
+    @Override
     public ServeProviderResDTO findServeProviderInfo(Long id) {
         ServeProvider serveProvider = this.findById(id);
         ServeProviderResDTO serveProviderResDTO = BeanUtils.toBean(serveProvider, ServeProviderResDTO.class);

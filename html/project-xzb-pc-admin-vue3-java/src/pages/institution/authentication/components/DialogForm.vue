@@ -87,7 +87,8 @@ const form = ref()
 const emit: Function = defineEmits([
   'handleClose',
   'fetchData',
-  'handleConfirmCancel'
+  'handleConfirmCancel',
+  'handleSubmit'
 ])
 // 弹窗
 const formVisible = ref(false)
@@ -102,7 +103,6 @@ const title = ref()
 const onSubmit = (result: ValidateResultContext<FormData>) => {
   if (result.validateResult === true) {
     emit('handleSubmit', formData.value)
-    onClickCloseBtn()
   }
 }
 // 点击取消关闭

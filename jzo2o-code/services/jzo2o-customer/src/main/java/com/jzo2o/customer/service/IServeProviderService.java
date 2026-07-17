@@ -76,8 +76,21 @@ public interface IServeProviderService extends IService<ServeProvider> {
      */
     ServeProvider add(String phone, Integer type, String password);
 
-    ServeProviderResDTO findServeProviderInfo(Long id);
+    /**
+     * 注册机构账号
+     *
+     * @param institutionRegisterReqDTO 机构注册信息
+     */
+    void registerInstitution(InstitutionRegisterReqDTO institutionRegisterReqDTO);
 
+    /**
+     * 重置机构账号密码
+     *
+     * @param institutionResetPasswordReqDTO 机构密码重置信息
+     */
+    void resetInstitutionPassword(InstitutionResetPasswordReqDTO institutionResetPasswordReqDTO);
+
+    ServeProviderResDTO findServeProviderInfo(Long id);
     /**
      * 根据id更新名称
      *
