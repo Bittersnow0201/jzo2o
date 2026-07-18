@@ -35,8 +35,6 @@ import java.util.List;
 /**
  * 区域管理
  *
- * @author itcast
- * @create 2023/7/17 16:50
  **/
 @Service
 public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> implements IRegionService {

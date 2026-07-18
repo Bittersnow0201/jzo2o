@@ -97,4 +97,12 @@ public interface IServeItemService extends IService<ServeItem> {
      * @return 服务项目录
      */
     List<ServeTypeCategoryResDTO> queryActiveServeItemCategory();
+
+    /**
+     * 根据id查询服务项并缓存
+     *
+     * @param id 服务项id
+     * @return 服务项信息
+     */
+    ServeItem queryServeItemByIdCache(Long id);
 }

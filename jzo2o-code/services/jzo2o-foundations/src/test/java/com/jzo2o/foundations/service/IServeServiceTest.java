@@ -19,6 +19,14 @@ class IServeServiceTest {
     @Resource
     private IServeService serveService;
 
+    //区域服务查询缓存测试（请替换为库中真实存在的 serve.id）
+    @Test
+    public void test_queryServeByIdCache() {
+        Serve serve = serveService.queryServeByIdCache(1687401441778552834L);
+        log.info("serve : {}", serve);
+        Assert.notNull(serve, "服务为空");
+    }
+
     //分页测试
     @Test
     public void test_page(){

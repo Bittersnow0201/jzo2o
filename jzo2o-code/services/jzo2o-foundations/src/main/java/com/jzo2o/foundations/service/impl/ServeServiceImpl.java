@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jzo2o.common.expcetions.CommonException;
 import com.jzo2o.common.expcetions.ForbiddenOperationException;
 import com.jzo2o.common.model.PageResult;
+import com.jzo2o.foundations.constants.RedisConstants;
 import com.jzo2o.foundations.enums.FoundationStatusEnum;
 import com.jzo2o.foundations.mapper.RegionMapper;
 import com.jzo2o.foundations.mapper.ServeItemMapper;
@@ -18,6 +19,9 @@ import com.jzo2o.foundations.model.dto.request.ServeUpsertReqDTO;
 import com.jzo2o.foundations.model.dto.response.ServeResDTO;
 import com.jzo2o.foundations.service.IServeService;
 import com.jzo2o.mysql.utils.PageHelperUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -88,6 +92,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
      */
     @Override
     @Transactional
+    @CachePut(value = RedisConstants.CacheName.SERVE, key = "#id",
+            cacheManager = RedisConstants.CacheManager.ONE_DAY)
     public Serve update(Long id, BigDecimal price) {
         //1.更新服务价格
         boolean update = lambdaUpdate()
@@ -107,6 +113,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
      */
     @Override
     @Transactional
+    @CachePut(value = RedisConstants.CacheName.SERVE, key = "#id",
+            cacheManager = RedisConstants.CacheManager.ONE_DAY)
     public Serve onSale(Long id) {
         Serve serve = baseMapper.selectById(id);
         if (ObjectUtil.isNull(serve)) {
@@ -149,6 +157,7 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
      */
     @Override
     @Transactional
+    @CacheEvict(value = RedisConstants.CacheName.SERVE, key = "#id")
     public Serve offSale(Long id) {
         Serve serve = baseMapper.selectById(id);
         if (ObjectUtil.isNull(serve)) {
@@ -199,6 +208,7 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
      */
     @Override
     @Transactional
+    @CacheEvict(value = RedisConstants.CacheName.HOT_SERVE, key = "#result.regionId")
     public Serve onHot(Long id) {
         Serve serve = baseMapper.selectById(id);
         if (ObjectUtil.isNull(serve)) {
@@ -223,6 +233,7 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
      */
     @Override
     @Transactional
+    @CacheEvict(value = RedisConstants.CacheName.HOT_SERVE, key = "#result.regionId")
     public Serve offHot(Long id) {
         Serve serve = baseMapper.selectById(id);
         if (ObjectUtil.isNull(serve)) {
@@ -270,5 +281,18 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
                 .eq(Serve::getSaleStatus, saleStatus)
                 .count()
                 .intValue();
+    }
+
+    /**
+     * 查询区域服务信息并进行缓存
+     *
+     * @param id 对应serve表的主键
+     * @return 区域服务信息
+     */
+    @Override
+    @Cacheable(value = RedisConstants.CacheName.SERVE, key = "#id",
+            cacheManager = RedisConstants.CacheManager.ONE_DAY)
+    public Serve queryServeByIdCache(Long id) {
+        return getById(id);
     }
 }
