@@ -18,6 +18,7 @@ import com.jzo2o.foundations.model.dto.request.ServePageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeUpsertReqDTO;
 import com.jzo2o.foundations.model.dto.response.ServeResDTO;
 import com.jzo2o.foundations.service.IServeService;
+import com.jzo2o.foundations.service.IServeSyncService;
 import com.jzo2o.mysql.utils.PageHelperUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -37,6 +39,9 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
 
     @Resource
     private RegionMapper regionMapper;
+
+    @Resource
+    private IServeSyncService serveSyncService;
 
     /**
      * 分页查询服务列表
@@ -103,6 +108,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
         if (!update) {
             throw new CommonException("修改服务价格失败");
         }
+        //2.同步到serve_sync，触发Canal写入ES
+        serveSyncService.updatePrice(id, price);
         return baseMapper.selectById(id);
     }
 
@@ -147,7 +154,10 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
         if (!update) {
             throw new CommonException("启动服务失败");
         }
-        return baseMapper.selectById(id);
+        Serve dbServe = baseMapper.selectById(id);
+        //写入serve_sync，触发Canal新增ES索引
+        serveSyncService.batchInsertServeSync(Collections.singletonList(dbServe));
+        return dbServe;
     }
 
     /**
@@ -178,6 +188,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
         if (!update) {
             throw new CommonException("下架服务失败");
         }
+        //删除serve_sync，触发Canal删除ES索引
+        serveSyncService.removeById(id);
         return baseMapper.selectById(id);
     }
 
@@ -223,6 +235,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
         if (!update) {
             throw new CommonException("设置热门失败");
         }
+        //同步到serve_sync
+        serveSyncService.onHotSync(id);
         return baseMapper.selectById(id);
     }
 
@@ -248,6 +262,8 @@ public class ServeServiceImpl extends ServiceImpl<ServeMapper, Serve> implements
         if (!update) {
             throw new CommonException("取消热门失败");
         }
+        //同步到serve_sync
+        serveSyncService.offHotSync(id);
         return baseMapper.selectById(id);
     }
 
