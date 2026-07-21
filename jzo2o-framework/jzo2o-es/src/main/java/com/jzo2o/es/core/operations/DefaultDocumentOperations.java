@@ -299,15 +299,13 @@ public class DefaultDocumentOperations implements DocumentOperations {
     }
 
     private Boolean isSuccess(BulkResponse response) {
-        //todo
         log.debug("bulk response : {}", JsonUtils.toJsonStr(response));
-        if(response.errors()) {
+        if (response.errors()) {
             return false;
         }
+        // ES bulk：新建文档常返回 201 Created，更新返回 200；2xx 均视为成功
         return response.items().stream()
-                .filter(item -> item.status() != 200)
-                .map(item -> false)
-                .findFirst().orElse(true);
+                .allMatch(item -> item.status() >= 200 && item.status() < 300);
     }
 
     public Boolean isSuccess(DeleteByQueryResponse deleteByQueryResponse) {

@@ -111,7 +111,9 @@ onShow(() => {
 // tab触发切换
 const setTabIndex = (index) => {
   params.status = index
+  params.lastId = ''
   itemData.value = []
+  isSendRequest.value = false
   getNewData();
 };
 // 上拉更多数据

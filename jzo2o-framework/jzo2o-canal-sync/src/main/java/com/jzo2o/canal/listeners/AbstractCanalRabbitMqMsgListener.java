@@ -1,5 +1,8 @@
 package com.jzo2o.canal.listeners;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.util.StrUtil;
 import com.jzo2o.canal.constants.FieldConstants;
 import com.jzo2o.canal.constants.OperateType;
 import com.jzo2o.canal.core.CanalDataHandler;
@@ -16,7 +19,6 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public abstract class AbstractCanalRabbitMqMsgListener<T> implements CanalDataHandler<T> {
@@ -63,7 +65,7 @@ public abstract class AbstractCanalRabbitMqMsgListener<T> implements CanalDataHa
             return;
         }
         if (canalBaseDTO.getIsSave()) {
-            T t1 = JsonUtils.toBean(JsonUtils.toJsonStr(canalBaseDTO.getFieldMap()), messageType);
+            T t1 = mapToEntity(canalBaseDTO.getFieldMap(), messageType);
             List<T> ts = Arrays.asList(t1);
             batchSave(ts);
         } else {
@@ -81,15 +83,9 @@ public abstract class AbstractCanalRabbitMqMsgListener<T> implements CanalDataHa
         }
 
         if(canalMqInfo.getIsSave()){
-            List<T> collect = canalMqInfo.getData().stream().map(fieldMap -> {
-                CanalBaseDTO canalBaseDTO = CanalBaseDTO.builder()
-                        .id(parseId(fieldMap))
-                        .database(canalMqInfo.getDatabase())
-                        .table(canalMqInfo.getTable())
-                        .isSave(canalMqInfo.getIsSave())
-                        .fieldMap(fieldMap).build();
-                return JsonUtils.toBean(JsonUtils.toJsonStr(canalBaseDTO.getFieldMap()), messageType);
-            }).collect(Collectors.toList());
+            List<T> collect = canalMqInfo.getData().stream()
+                    .map(fieldMap -> mapToEntity(fieldMap, messageType))
+                    .collect(Collectors.toList());
             batchSave(collect);
         }else{
             List<Long> ids = canalMqInfo.getData().stream().map(fieldMap -> {
@@ -99,6 +95,14 @@ public abstract class AbstractCanalRabbitMqMsgListener<T> implements CanalDataHa
             batchDelete(ids);
         }
 
+    }
+
+    /**
+     * Canal binlog 字段为 snake_case，需转成 Java camelCase 再写入 ES
+     */
+    private T mapToEntity(Map<String, Object> fieldMap, Class<T> messageType) {
+        return BeanUtil.mapToBean(fieldMap, messageType, false,
+                CopyOptions.create().setFieldNameEditor(StrUtil::toCamelCase));
     }
 
     private Long parseId(Map<String, Object> fieldMap) {

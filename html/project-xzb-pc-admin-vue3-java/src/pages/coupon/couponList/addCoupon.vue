@@ -117,7 +117,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -178,8 +178,11 @@ const fetchData = async (val) => {
 // 提交
 const onSubmit = (result: ValidateResultContext<FormData>) => {
   if (result.validateResult === true) {
-    requestData.value.discountRate = formData.value.discountRate
-    requestData.value.discountAmount = formData.value.discountAmount
+    // 按券类型只提交对应字段，避免另一字段校验残留
+    requestData.value.discountRate =
+      formData.value.type === 2 ? formData.value.discountRate : null
+    requestData.value.discountAmount =
+      formData.value.type === 1 ? formData.value.discountAmount : null
     requestData.value.amountCondition = formData.value.amountCondition
     requestData.value.type = formData.value.type
     requestData.value.name = formData.value.name
@@ -212,22 +215,27 @@ const updateData = async (val) => {
       console.log(err)
     })
 }
-const rules = {
+// 满减/折扣互斥：隐藏字段不能仍做 required，否则提交会被静默拦住
+const rules = computed(() => ({
   name: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
   amountCondition: [
     { required: true, message: '请输入满额限制', trigger: 'blur' }
   ],
-  discountAmount: [
-    { required: true, message: '请输入抵扣金额', trigger: 'blur' }
-  ],
-  discountRate: [
-    { required: true, message: '请输入折扣率', trigger: 'blur' },
-    {
-      validator: validateNumber100,
-      trigger: 'blur',
-      message: '请输入1-100之间整数'
-    }
-  ],
+  discountAmount:
+    formData.value.type === 1
+      ? [{ required: true, message: '请输入抵扣金额', trigger: 'blur' }]
+      : [],
+  discountRate:
+    formData.value.type === 2
+      ? [
+          { required: true, message: '请输入折扣率', trigger: 'blur' },
+          {
+            validator: validateNumber100,
+            trigger: 'blur',
+            message: '请输入1-100之间整数'
+          }
+        ]
+      : [],
   distributeTime: [
     { required: true, message: '请选择发放时间', trigger: 'change' }
   ],
@@ -240,7 +248,7 @@ const rules = {
     }
   ],
   totalNum: [{ required: true, message: '请输入发放数量', trigger: 'blur' }]
-}
+}))
 
 // 返回上一级
 const handleBack = () => {

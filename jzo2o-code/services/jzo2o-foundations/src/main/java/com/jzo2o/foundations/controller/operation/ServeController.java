@@ -5,6 +5,7 @@ import com.jzo2o.foundations.model.dto.request.ServePageQueryReqDTO;
 import com.jzo2o.foundations.model.dto.request.ServeUpsertReqDTO;
 import com.jzo2o.foundations.model.dto.response.ServeResDTO;
 import com.jzo2o.foundations.service.IServeService;
+import com.jzo2o.foundations.service.IServeSyncService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController("operationServeController")
 @RequestMapping("/operation/serve")
@@ -21,6 +24,9 @@ import java.util.List;
 public class ServeController {
     @Resource
     private IServeService serveService;
+
+    @Resource
+    private IServeSyncService serveSyncService;
 
     @GetMapping("/page")
     @ApiOperation("区域服务分页查询")
@@ -89,5 +95,15 @@ public class ServeController {
     })
     public void offHot(@PathVariable("id") Long id) {
         serveService.offHot(id);
+    }
+
+    @PostMapping("/sync-es")
+    @ApiOperation("修复并全量同步服务搜索索引到ES")
+    public Map<String, Object> syncEs() {
+        int count = serveSyncService.syncServeToEs();
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("count", count);
+        result.put("message", "同步成功");
+        return result;
     }
 }

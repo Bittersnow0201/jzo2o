@@ -1,10 +1,15 @@
 package com.jzo2o.foundations.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.jzo2o.es.core.ElasticSearchTemplate;
+import com.jzo2o.foundations.constants.IndexConstants;
+import com.jzo2o.foundations.enums.FoundationStatusEnum;
 import com.jzo2o.foundations.mapper.ServeItemMapper;
+import com.jzo2o.foundations.mapper.ServeMapper;
 import com.jzo2o.foundations.mapper.ServeSyncMapper;
 import com.jzo2o.foundations.mapper.ServeTypeMapper;
 import com.jzo2o.foundations.model.domain.Serve;
@@ -13,6 +18,7 @@ import com.jzo2o.foundations.model.domain.ServeSync;
 import com.jzo2o.foundations.model.domain.ServeType;
 import com.jzo2o.foundations.model.dto.request.ServeSyncUpdateReqDTO;
 import com.jzo2o.foundations.service.IServeSyncService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +37,7 @@ import java.util.stream.Collectors;
  * @author itcast
  * @since 2023-07-10
  */
+@Slf4j
 @Service
 public class ServeSyncServiceImpl extends ServiceImpl<ServeSyncMapper, ServeSync> implements IServeSyncService {
 
@@ -39,6 +46,12 @@ public class ServeSyncServiceImpl extends ServiceImpl<ServeSyncMapper, ServeSync
 
     @Resource
     private ServeTypeMapper serveTypeMapper;
+
+    @Resource
+    private ServeMapper serveMapper;
+
+    @Resource
+    private ElasticSearchTemplate elasticSearchTemplate;
 
     /**
      * 根据服务项id更新
@@ -126,6 +139,9 @@ public class ServeSyncServiceImpl extends ServiceImpl<ServeSyncMapper, ServeSync
     @Transactional
     @Override
     public void batchInsertServeSync(List<Serve> list) {
+        if (CollUtil.isEmpty(list)) {
+            return;
+        }
         Set<Long> itemIds = list.stream().map(Serve::getServeItemId).collect(Collectors.toSet());
         List<ServeItem> serveItems = serveItemMapper.selectBatchIds(itemIds);
         Map<Long, ServeItem> itemMaps = serveItems.stream()
@@ -157,5 +173,38 @@ public class ServeSyncServiceImpl extends ServiceImpl<ServeSyncMapper, ServeSync
         }).collect(Collectors.toList());
 
         saveBatch(serveSyncs);
+    }
+
+    /**
+     * 修复缺失的 serve_sync，并全量同步到 ES
+     */
+    @Override
+    @Transactional
+    public int syncServeToEs() {
+        // 1. 已上架但未写入 serve_sync 的数据补齐
+        List<Serve> onSaleServes = serveMapper.selectList(Wrappers.<Serve>lambdaQuery()
+                .eq(Serve::getSaleStatus, FoundationStatusEnum.ENABLE.getStatus()));
+        if (CollUtil.isNotEmpty(onSaleServes)) {
+            Set<Long> syncIds = list().stream().map(ServeSync::getId).collect(Collectors.toSet());
+            List<Serve> missing = onSaleServes.stream()
+                    .filter(s -> !syncIds.contains(s.getId()))
+                    .collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(missing)) {
+                log.info("补齐缺失 serve_sync 记录 {} 条", missing.size());
+                batchInsertServeSync(missing);
+            }
+        }
+
+        // 2. 全量写入 ES
+        List<ServeSync> all = list();
+        if (CollUtil.isEmpty(all)) {
+            return 0;
+        }
+        Boolean success = elasticSearchTemplate.opsForDoc().batchUpsert(IndexConstants.SERVE, all);
+        if (!Boolean.TRUE.equals(success)) {
+            throw new RuntimeException("同步 ES 失败");
+        }
+        log.info("已同步 {} 条服务到 ES 索引 {}", all.size(), IndexConstants.SERVE);
+        return all.size();
     }
 }

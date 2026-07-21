@@ -61,4 +61,11 @@ public interface IServeSyncService extends IService<ServeSync> {
      * @param list 区域服务列表
      */
     void batchInsertServeSync(List<Serve> list);
+
+    /**
+     * 修复缺失的 serve_sync，并全量同步到 ES（搜索索引补数）
+     *
+     * @return 同步到 ES 的文档数量
+     */
+    int syncServeToEs();
 }
